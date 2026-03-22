@@ -5,7 +5,7 @@ Validate your product ideas with simulated user panels,
 research market pain points, and generate feature ideas.
 """
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 
 from crowdmind.validate.panel import run_evaluation as analyze
 from crowdmind.validate.panel import run_evaluation as validate
