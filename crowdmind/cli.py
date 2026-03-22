@@ -381,12 +381,37 @@ def research(
             f"Sources: {', '.join(sources)}",
             border_style="blue"
         ))
-    
-    result = run_multi_research(
-        use_cache=not no_cache,
-        verbose=verbose and not quiet,
-        sources=sources,
-    )
+        console.print()
+        console.print("[dim]Searching for pain points and frustrations...[/dim]")
+        for source in sources:
+            if source == "reddit":
+                console.print("[dim]  → Querying Reddit API...[/dim]")
+            elif source == "hackernews":
+                console.print("[dim]  → Querying Hacker News (Algolia)...[/dim]")
+            elif source == "github":
+                console.print("[dim]  → Searching GitHub Issues...[/dim]")
+        console.print()
+        
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            task = progress.add_task("Analyzing discussions...", total=None)
+            result = run_multi_research(
+                use_cache=not no_cache,
+                verbose=False,
+                sources=sources,
+            )
+            progress.update(task, description="[green]✓ Research complete![/green]")
+            import time
+            time.sleep(0.5)
+    else:
+        result = run_multi_research(
+            use_cache=not no_cache,
+            verbose=verbose,
+            sources=sources,
+        )
     
     if output:
         output.write_text(json.dumps(result, indent=2))
@@ -422,12 +447,33 @@ def market(
             f"Project: {path}",
             border_style="blue"
         ))
-    
-    result = run_full_market_analysis(
-        project_path=path,
-        use_cache=not no_cache,
-        verbose=verbose and not quiet,
-    )
+        console.print()
+        console.print("[dim]Running market analysis...[/dim]")
+        console.print("[dim]  → Generating buyer personas...[/dim]")
+        console.print("[dim]  → Analyzing pricing strategies...[/dim]")
+        console.print("[dim]  → Predicting market success...[/dim]")
+        console.print()
+        
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            task = progress.add_task("Analyzing market...", total=None)
+            result = run_full_market_analysis(
+                project_path=path,
+                use_cache=not no_cache,
+                verbose=False,
+            )
+            progress.update(task, description="[green]✓ Analysis complete![/green]")
+            import time
+            time.sleep(0.5)
+    else:
+        result = run_full_market_analysis(
+            project_path=path,
+            use_cache=not no_cache,
+            verbose=verbose,
+        )
     
     if output:
         output.write_text(json.dumps(result, indent=2))
