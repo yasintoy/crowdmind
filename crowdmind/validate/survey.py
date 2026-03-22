@@ -222,6 +222,23 @@ def run_multi_metric_survey(
         return survey.by(agents).by(model).run()
     
     results = _run_with_retry(_run, verbose=verbose, max_retries=max_retries)
+    
+    # Check for rate limit errors in results
+    try:
+        # EDSL stores exceptions - check if any are rate limits
+        if hasattr(results, 'task_history') and results.task_history:
+            for task in results.task_history.values() if hasattr(results.task_history, 'values') else []:
+                if hasattr(task, 'exceptions') and task.exceptions:
+                    for exc in task.exceptions:
+                        exc_str = str(exc).lower()
+                        if '429' in exc_str or 'rate' in exc_str:
+                            if verbose:
+                                print("\n  ⚠️  [Rate Limit Warning] Anthropic rate limit hit.")
+                                print("     Some personas may have incomplete responses.")
+                                print(f"     Tip: Try fewer personas with --personas 5")
+                            break
+    except Exception:
+        pass  # Don't fail on error checking
 
     # Extract scores
     interest_scores = [r for r in results.select("interest").to_list() if r is not None]

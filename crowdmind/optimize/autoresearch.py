@@ -286,6 +286,7 @@ def run_optimization(
     target: float = 80.0,
     max_iterations: int = 10,
     verbose: bool = True,
+    num_agents: int = 10,
 ) -> OptimizationResult:
     """Convenience function to run optimization"""
     loop = AutoresearchLoop()
@@ -295,4 +296,5 @@ def run_optimization(
         target_score=target,
         max_iterations=max_iterations,
         verbose=verbose,
+        num_personas=num_agents,
     )
