@@ -1,0 +1,77 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.env
+.venv/
+venv/
+ENV/
+build_venv/
+
+# Crowdmind cache and output
+.crowdmind/
+crowdmind-report.md
+*-report.md
+
+# EDSL artifacts
+.edsl_model_archive.json
+tmp*.html
+output.html
+
+# Research cache (regenerated on run)
+codebase_analysis.json
+feature_ideas.json
+market_analysis.json
+multi_research.json
+reddit_research.json
+state.json
+state_edsl.json
+optimization_history.json
+
+# Logs
+log.md
+log_edsl.md
+results.tsv
+results_edsl.tsv
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Build artifacts
+*.manifest
+*.spec
+
+# Keep persona packs
+!persona_packs/*.yaml
+!crowdmind/persona_packs/*.yaml

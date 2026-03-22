@@ -1,0 +1,83 @@
+name: Consumer Apps
+description: Personas for consumer mobile apps, social platforms, and direct-to-consumer products
+
+personas:
+  - persona: "Tech-savvy early adopter who tries every new app, pays for premium tiers of favorites"
+    category: early_adopter
+    skepticism: low
+    traits:
+      - high_adoption
+      - premium_payer
+      - trend_follower
+
+  - persona: "Privacy-conscious user who avoids apps that require sign-up or collect data"
+    category: skeptic
+    skepticism: high
+    traits:
+      - privacy_first
+      - anonymous_preferred
+      - data_minimalist
+
+  - persona: "College student on tight budget, only uses free apps or those with student discounts"
+    category: budget_conscious
+    skepticism: medium
+    traits:
+      - free_tier_only
+      - student_discount
+      - value_seeker
+
+  - persona: "Busy parent who needs apps to solve immediate problems, no patience for complex onboarding"
+    category: pragmatist
+    skepticism: medium
+    traits:
+      - time_constrained
+      - simplicity_first
+      - problem_solver
+
+  - persona: "Power user who customizes everything, wants API access and advanced settings"
+    category: power_user
+    skepticism: low
+    traits:
+      - customization_needs
+      - api_access
+      - advanced_features
+
+  - persona: "Social media influencer who evaluates apps based on shareability and aesthetic"
+    category: early_adopter
+    skepticism: low
+    traits:
+      - aesthetic_focused
+      - social_sharing
+      - trend_setter
+
+  - persona: "Retiree learning technology, needs clear instructions and large text options"
+    category: pragmatist
+    skepticism: high
+    traits:
+      - accessibility_needs
+      - learning_curve_sensitive
+      - support_dependent
+
+  - persona: "Gamer who expects apps to be as polished as AAA games, low tolerance for bugs"
+    category: skeptic
+    skepticism: medium
+    traits:
+      - quality_expectations
+      - bug_intolerant
+      - performance_focused
+
+  - persona: "Small business owner who blurs personal/work use, willing to pay for productivity gains"
+    category: founder
+    skepticism: medium
+    traits:
+      - prosumer
+      - productivity_focused
+      - medium_budget
+
+  - persona: "Minimalist who has 12 apps on phone, extremely selective about what to install"
+    category: skeptic
+    skepticism: high
+    traits:
+      - selective
+      - quality_over_quantity
+      - deletion_prone

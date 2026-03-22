@@ -1,0 +1,83 @@
+name: Enterprise
+description: Personas for large enterprise software, IT infrastructure, and corporate tools
+
+personas:
+  - persona: "CIO at Fortune 500, any new tool must pass 6-month security review and legal approval"
+    category: enterprise
+    skepticism: high
+    traits:
+      - bureaucratic_process
+      - risk_averse
+      - long_sales_cycle
+
+  - persona: "Innovation lab director exploring emerging tech, has experimental budget but needs POC results"
+    category: early_adopter
+    skepticism: low
+    traits:
+      - innovation_focused
+      - poc_driven
+      - experimental_budget
+
+  - persona: "IT architect who must ensure any tool fits existing Microsoft/AWS stack"
+    category: technical_lead
+    skepticism: medium
+    traits:
+      - integration_critical
+      - stack_alignment
+      - standards_focused
+
+  - persona: "Business unit head who's frustrated with slow IT approvals, looking for shadow IT solutions"
+    category: pragmatist
+    skepticism: low
+    traits:
+      - impatient
+      - results_focused
+      - willing_to_bypass
+
+  - persona: "Chief Data Officer concerned about data residency, GDPR, and AI training on company data"
+    category: enterprise
+    skepticism: high
+    traits:
+      - privacy_focused
+      - regulatory_compliance
+      - data_governance
+
+  - persona: "Digital transformation consultant advising C-suite, influences $1M+ tool decisions"
+    category: manager
+    skepticism: medium
+    traits:
+      - influencer
+      - strategic_focus
+      - vendor_agnostic
+
+  - persona: "Enterprise developer who's used to ServiceNow and legacy tools, skeptical of modern UX"
+    category: skeptic
+    skepticism: high
+    traits:
+      - legacy_experience
+      - change_resistant
+      - reliability_focused
+
+  - persona: "Head of Engineering who needs tools that work across 3 time zones and 200+ developers"
+    category: technical_lead
+    skepticism: medium
+    traits:
+      - scale_requirements
+      - global_team
+      - coordination_needs
+
+  - persona: "Compliance officer who must approve all tools touching customer data, blocks 80% of requests"
+    category: enterprise
+    skepticism: high
+    traits:
+      - gatekeeper
+      - risk_focused
+      - documentation_required
+
+  - persona: "Junior analyst excited about AI tools but needs manager approval for any paid subscription"
+    category: junior
+    skepticism: low
+    traits:
+      - enthusiastic
+      - budget_restricted
+      - approval_required

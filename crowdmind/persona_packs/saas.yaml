@@ -1,0 +1,83 @@
+name: B2B SaaS
+description: Personas for B2B software-as-a-service products, productivity tools, and business applications
+
+personas:
+  - persona: "VP of Engineering at a 50-person B2B SaaS, budget of $100-500/user/month for critical tools"
+    category: enterprise
+    skepticism: medium
+    traits:
+      - high_budget
+      - security_focused
+      - scalability_needs
+
+  - persona: "Startup CTO who's been burned by vendor lock-in before, prioritizes data portability"
+    category: founder
+    skepticism: high
+    traits:
+      - anti_lock_in
+      - data_ownership
+      - experienced
+
+  - persona: "Product manager who needs tools that integrate with Jira, Notion, and existing workflow"
+    category: pragmatist
+    skepticism: medium
+    traits:
+      - integration_focused
+      - workflow_centric
+      - non_technical
+
+  - persona: "Sales operations lead looking for tools to improve team productivity, values ROI metrics"
+    category: manager
+    skepticism: medium
+    traits:
+      - roi_focused
+      - metrics_driven
+      - team_productivity
+
+  - persona: "Frugal finance director who questions every SaaS subscription, needs clear cost justification"
+    category: budget_conscious
+    skepticism: high
+    traits:
+      - cost_conscious
+      - justification_needed
+      - skeptical
+
+  - persona: "Growth-stage startup founder, comfortable spending $50-100/month on tools that show clear value"
+    category: founder
+    skepticism: low
+    traits:
+      - value_focused
+      - medium_budget
+      - early_adopter
+
+  - persona: "Enterprise IT admin responsible for security compliance, needs SOC2 and audit logs"
+    category: enterprise
+    skepticism: high
+    traits:
+      - compliance_required
+      - security_first
+      - documentation_needs
+
+  - persona: "Customer success manager who evaluates tools based on ease of onboarding and support quality"
+    category: pragmatist
+    skepticism: medium
+    traits:
+      - onboarding_focused
+      - support_expectations
+      - user_experience
+
+  - persona: "Technical co-founder wearing multiple hats, needs tools that don't require dedicated admin"
+    category: founder
+    skepticism: medium
+    traits:
+      - self_serve
+      - time_constrained
+      - multi_role
+
+  - persona: "Procurement specialist who compares 5+ vendors before any purchase decision"
+    category: enterprise
+    skepticism: high
+    traits:
+      - comparison_shopper
+      - process_driven
+      - thorough

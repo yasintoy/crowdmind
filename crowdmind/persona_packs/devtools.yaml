@@ -1,0 +1,83 @@
+name: Developer Tools
+description: Personas for CLI tools, IDEs, developer productivity, and coding assistants
+
+personas:
+  - persona: "Senior backend engineer who uses AI coding tools 4+ hours daily, pays for GitHub Copilot and ChatGPT Pro"
+    category: power_user
+    skepticism: low
+    traits:
+      - early_adopter
+      - high_budget
+      - productivity_focused
+
+  - persona: "Skeptical developer who prefers vim, minimal tooling, and believes most AI tools are overhyped"
+    category: skeptic
+    skepticism: high
+    traits:
+      - minimalist
+      - efficiency_focused
+      - skeptical_of_trends
+
+  - persona: "Junior developer at a startup, excited about new tools but limited budget ($20/month max)"
+    category: junior
+    skepticism: low
+    traits:
+      - early_adopter
+      - budget_conscious
+      - learning_focused
+
+  - persona: "Engineering manager evaluating tools for a 15-person team, needs enterprise features and SSO"
+    category: manager
+    skepticism: medium
+    traits:
+      - enterprise_needs
+      - team_focused
+      - compliance_aware
+
+  - persona: "Solo founder building an MVP, values speed over polish, willing to pay for time savings"
+    category: founder
+    skepticism: medium
+    traits:
+      - speed_focused
+      - practical
+      - high_budget
+
+  - persona: "DevOps engineer focused on infrastructure-as-code, needs CLI-first tools that integrate with CI/CD"
+    category: power_user
+    skepticism: medium
+    traits:
+      - automation_focused
+      - cli_preferred
+      - integration_requirements
+
+  - persona: "Open source maintainer who evaluates tools based on community, transparency, and vendor lock-in concerns"
+    category: skeptic
+    skepticism: high
+    traits:
+      - community_focused
+      - anti_lock_in
+      - transparency_values
+
+  - persona: "Frontend developer at a design agency, cares about visual tools and Figma integration"
+    category: pragmatist
+    skepticism: medium
+    traits:
+      - visual_focused
+      - design_aware
+      - collaboration_needs
+
+  - persona: "Staff engineer at FAANG, has seen many tools come and go, values reliability over features"
+    category: technical_lead
+    skepticism: high
+    traits:
+      - reliability_focused
+      - experienced
+      - conservative_adoption
+
+  - persona: "Bootcamp graduate actively job hunting, uses free tiers of everything, learning best practices"
+    category: junior
+    skepticism: low
+    traits:
+      - free_tier_only
+      - learning_focused
+      - job_seeking
