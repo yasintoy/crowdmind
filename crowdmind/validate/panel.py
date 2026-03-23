@@ -18,11 +18,13 @@ from crowdmind.validate.personas import (
 )
 
 try:
-    from edsl import Agent, AgentList, Model
+    from edsl import Agent, AgentList, Model, Survey
     from edsl import QuestionLinearScale, QuestionMultipleChoice, QuestionFreeText
     HAS_EDSL = True
 except ImportError:
     HAS_EDSL = False
+
+from crowdmind.validate.runner import run_interviews
 
 
 def create_agents(
@@ -167,11 +169,20 @@ def run_evaluation(
         if categories:
             print(f"  Categories: {categories}")
     
-    # Run the question with all agents
-    results = question.by(agents).by(model).run()
-    
-    # Extract scores
-    star_scores = [r for r in results.select("star").to_list() if r is not None]
+    # Run the question with all agents via AdaptiveRunner
+    survey = Survey([question])
+    agents_list = agents._agents if hasattr(agents, '_agents') else list(agents)
+    raw_results = run_interviews(
+        survey=survey,
+        agents=agents_list,
+        model=model,
+        question_names=["star"],
+        verbose=verbose,
+    )
+    star_scores = [
+        r.get("star") for r in raw_results
+        if r is not None and r.get("star") is not None
+    ]
     
     # Calculate metrics
     star_rate = len([s for s in star_scores if s >= 7]) / len(star_scores) if star_scores else 0
@@ -267,15 +278,37 @@ def run_ab_test(
         print(f"Running A/B test: {change_description}")
         print(f"Testing with {agent_count} agent personas...")
     
+    agents_list = agents._agents if hasattr(agents, '_agents') else list(agents)
+
     # Run version A
     q_a = create_ab_star_question(content_a, "A")
-    results_a = q_a.by(agents).by(model).run()
-    a_scores = [r for r in results_a.select("star_a").to_list() if r is not None]
-    
+    survey_a = Survey([q_a])
+    raw_a = run_interviews(
+        survey=survey_a,
+        agents=agents_list,
+        model=model,
+        question_names=["star_a"],
+        verbose=verbose,
+    )
+    a_scores = [
+        r.get("star_a") for r in raw_a
+        if r is not None and r.get("star_a") is not None
+    ]
+
     # Run version B
     q_b = create_ab_star_question(content_b, "B")
-    results_b = q_b.by(agents).by(model).run()
-    b_scores = [r for r in results_b.select("star_b").to_list() if r is not None]
+    survey_b = Survey([q_b])
+    raw_b = run_interviews(
+        survey=survey_b,
+        agents=agents_list,
+        model=model,
+        question_names=["star_b"],
+        verbose=verbose,
+    )
+    b_scores = [
+        r.get("star_b") for r in raw_b
+        if r is not None and r.get("star_b") is not None
+    ]
     
     # Calculate averages
     a_avg = sum(a_scores) / len(a_scores) if a_scores else 0
