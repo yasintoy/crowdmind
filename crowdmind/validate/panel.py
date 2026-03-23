@@ -24,6 +24,7 @@ try:
 except ImportError:
     HAS_EDSL = False
 
+# run_interviews guards its own EDSL import internally - safe to import unconditionally
 from crowdmind.validate.runner import run_interviews
 
 
