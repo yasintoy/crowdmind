@@ -56,6 +56,11 @@ Persona Feedback:
   ✗ Skeptic (4/10): "What makes this different from existing tools?"
 ```
 
+<p align="center">
+  <img src="assets/basic-validation.gif" alt="CrowdMind validation demo" width="600">
+</p>
+
+
 ## What It Does
 
 1. **Scrapes Reddit, HN, GitHub** for what users actually complain about
@@ -157,6 +162,10 @@ $ crowdmind research --topics "developer tools" --sources reddit hackernews
    → Cost tracking dashboard (solves #2)
    → Smart context compression (solves #3)
 ```
+
+<p align="center">
+  <img src="assets/user-frictions.gif" alt="CrowdMind research — surfacing user frictions from Reddit, HN, and GitHub" width="600">
+</p>
 
 ## Commands
 
