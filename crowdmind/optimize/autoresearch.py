@@ -34,6 +34,7 @@ def _run_survey(
             context_prompt,
             num_agents=num_agents,
             verbose=verbose,
+            report_api_issues=True,
         )
     except ImportError:
         from crowdmind.validate.panel import run_evaluation
@@ -98,7 +99,7 @@ class AutoresearchLoop:
         max_iterations: int = 10,
         metric: str = "overall",
         verbose: bool = True,
-        num_personas: int = 10,
+        num_personas: int = 5,
     ) -> OptimizationResult:
         """
         Run the autoresearch optimization loop.
@@ -286,7 +287,8 @@ def run_optimization(
     target: float = 80.0,
     max_iterations: int = 10,
     verbose: bool = True,
-    num_agents: int = 10,
+    num_agents: int = 5,
+    metric: str = "overall",
 ) -> OptimizationResult:
     """Convenience function to run optimization"""
     loop = AutoresearchLoop()
@@ -295,6 +297,7 @@ def run_optimization(
         context_prompt=context_prompt,
         target_score=target,
         max_iterations=max_iterations,
+        metric=metric,
         verbose=verbose,
         num_personas=num_agents,
     )

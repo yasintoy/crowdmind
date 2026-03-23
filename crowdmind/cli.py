@@ -192,6 +192,7 @@ def validate(
                     context_prompt=context_prompt,
                     num_agents=personas,
                     verbose=False,
+                    report_api_issues=True,
                 )
                 progress.update(task, description="[green]✓ Done![/green]")
                 time.sleep(0.5)  # Let user see the "Done" message
@@ -201,6 +202,7 @@ def validate(
                 context_prompt=context_prompt,
                 num_agents=personas,
                 verbose=False,
+                report_api_issues=not quiet,
             )
         
         if output:
@@ -293,7 +295,12 @@ def optimize(
     metric: str = typer.Option("overall", "--metric", "-m", help="Metric to optimize (overall, interest, usefulness, urgency)"),
     context: Optional[Path] = typer.Option(None, "--context", help="Path to product for context"),
     product: Optional[str] = typer.Option(None, "--product", help="Product description for context"),
-    personas: int = typer.Option(10, "--personas", "-p", help="Personas per evaluation"),
+    personas: int = typer.Option(
+        5,
+        "--personas",
+        "-p",
+        help="Personas per evaluation (lower = fewer parallel API calls, less 429)",
+    ),
     output: Optional[Path] = typer.Option(None, "--output", "-o", help="Save final content to file"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Minimal output"),
@@ -323,36 +330,16 @@ def optimize(
             border_style="blue"
         ))
     
-    import glob
-    import os
-    
-    # Count existing temp HTML files (EDSL exception reports)
-    existing_reports = set(glob.glob("tmp*.html"))
-    
     result = run_optimization(
         content=content,
         context_prompt=context_prompt,
         target=target,
         max_iterations=iterations,
+        metric=metric,
         verbose=not quiet,
         num_agents=personas,
     )
-    
-    # Check for new exception reports and warn user
-    new_reports = set(glob.glob("tmp*.html")) - existing_reports
-    if new_reports and not quiet:
-        console.print("\n[yellow]⚠️  Some API errors occurred (likely rate limits)[/yellow]")
-        console.print("[dim]   Anthropic limits concurrent requests. Try:[/dim]")
-        console.print("[dim]   • Use fewer personas: --personas 5[/dim]")
-        console.print("[dim]   • Wait a minute between runs[/dim]")
-        console.print("[dim]   • Set ANTHROPIC_API_KEY to a higher-tier account[/dim]")
-        # Clean up temp files
-        for f in new_reports:
-            try:
-                os.remove(f)
-            except:
-                pass
-    
+
     if not quiet:
         # Summary
         console.print("\n" + "="*60)

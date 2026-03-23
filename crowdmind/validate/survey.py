@@ -135,7 +135,9 @@ def _run_with_retry(func, verbose: bool = True, max_retries: int = MAX_RETRIES):
             error_str = str(e).lower()
             
             # Check for rate limit errors
-            if "429" in error_str or "rate" in error_str and "limit" in error_str:
+            if "429" in error_str or (
+                "rate" in error_str and "limit" in error_str
+            ):
                 if verbose:
                     print(f"  ⚠️  Rate limit hit. Waiting {RATE_LIMIT_DELAY_SECONDS}s before retry...")
                 time.sleep(RATE_LIMIT_DELAY_SECONDS)
@@ -164,6 +166,81 @@ def _run_with_retry(func, verbose: bool = True, max_retries: int = MAX_RETRIES):
     raise last_error
 
 
+def _summarize_edsl_exceptions(results: Any) -> str:
+    """
+    Human-readable summary when EDSL interviews partially fail.
+    Replaces EDSL's stderr-only 'Exceptions were raised.' + HTML report path.
+    """
+    if not getattr(results, "has_unfixed_exceptions", False):
+        return ""
+    rate_limit = False
+    timeout = False
+    auth_error = False
+    other_msgs: List[str] = []
+    th = getattr(results, "task_history", None)
+    if th is None:
+        return (
+            "\n⚠️  CrowdMind: some persona interviews failed.\n"
+            "   Common cause: Anthropic rate limits (429) from parallel requests.\n"
+            "   Fix: use --personas 3–5 or wait 60s and retry."
+        )
+    try:
+        exc_groups = getattr(th, "exceptions", None) or []
+        for coll in exc_groups:
+            if hasattr(coll, "list"):
+                for item in coll.list():
+                    et = str(item.get("exception_type", ""))
+                    if "RateLimit" in et:
+                        rate_limit = True
+                    if "Timeout" in et:
+                        timeout = True
+                    if "Authentication" in et or "Auth" in et:
+                        auth_error = True
+            raw = getattr(coll, "data", None)
+            if raw is not None and hasattr(raw, "items"):
+                for _q, entries in raw.items():
+                    for entry in entries:
+                        exc = getattr(entry, "exception", None)
+                        if exc is None:
+                            continue
+                        msg = str(exc).lower()
+                        if "429" in msg or "rate_limit" in msg:
+                            rate_limit = True
+                        if "timeout" in msg:
+                            timeout = True
+                        if "401" in msg or "403" in msg or "api key" in msg:
+                            auth_error = True
+                        snippet = str(exc)[:200].replace("\n", " ")
+                        if snippet and snippet not in other_msgs:
+                            other_msgs.append(snippet)
+    except Exception:
+        pass
+
+    lines = [
+        "\n⚠️  CrowdMind: not all persona interviews completed successfully "
+        "(scores may be skewed)."
+    ]
+    if rate_limit:
+        lines.append(
+            "   Cause: API rate limits — too many parallel model calls (common on Anthropic)."
+        )
+        lines.append(
+            "   Fix:  use --personas 3–5, wait ~60s between runs, or upgrade API limits."
+        )
+    elif auth_error:
+        lines.append("   Cause: API authentication / permission error.")
+        lines.append("   Fix:  check ANTHROPIC_API_KEY (or your provider key) and billing.")
+    elif timeout:
+        lines.append("   Cause: Request timeouts.")
+        lines.append("   Fix:  retry with fewer personas or later.")
+    elif other_msgs:
+        lines.append(f"   Detail: {other_msgs[0]}")
+    else:
+        lines.append("   Cause: LLM or EDSL errors during some interviews.")
+        lines.append("   Fix:  retry with --personas 5; confirm API quota and model name.")
+    return "\n".join(lines)
+
+
 def run_multi_metric_survey(
     content: str,
     context_prompt: str = "",
@@ -172,6 +249,7 @@ def run_multi_metric_survey(
     model_name: str = "claude-sonnet-4-20250514",
     verbose: bool = True,
     max_retries: int = MAX_RETRIES,
+    report_api_issues: bool = True,
 ) -> ValidationResult:
     """
     Run the multi-metric survey and return structured results.
@@ -189,6 +267,8 @@ def run_multi_metric_survey(
         model_name: LLM model to use
         verbose: Print progress
         max_retries: Max retry attempts for transient errors
+        report_api_issues: If True, print a clear message when some interviews fail
+            (even when verbose=False; use False for --quiet CLI)
     """
     if not HAS_EDSL:
         raise ImportError("EDSL required. Install with: pip install edsl")
@@ -217,28 +297,17 @@ def run_multi_metric_survey(
         estimated_cost = agent_count * 0.01  # ~$0.01 per persona
         print(f"  Estimated cost: ~${estimated_cost:.2f}")
 
-    # Run with retry logic
+    # Run with retry logic (suppress EDSL's vague "Exceptions were raised" + HTML path)
     def _run():
-        return survey.by(agents).by(model).run()
-    
+        return survey.by(agents).by(model).run(
+            print_exceptions=False,
+            verbose=False,
+        )
+
     results = _run_with_retry(_run, verbose=verbose, max_retries=max_retries)
-    
-    # Check for rate limit errors in results
-    try:
-        # EDSL stores exceptions - check if any are rate limits
-        if hasattr(results, 'task_history') and results.task_history:
-            for task in results.task_history.values() if hasattr(results.task_history, 'values') else []:
-                if hasattr(task, 'exceptions') and task.exceptions:
-                    for exc in task.exceptions:
-                        exc_str = str(exc).lower()
-                        if '429' in exc_str or 'rate' in exc_str:
-                            if verbose:
-                                print("\n  ⚠️  [Rate Limit Warning] Anthropic rate limit hit.")
-                                print("     Some personas may have incomplete responses.")
-                                print(f"     Tip: Try fewer personas with --personas 5")
-                            break
-    except Exception:
-        pass  # Don't fail on error checking
+
+    if report_api_issues and getattr(results, "has_unfixed_exceptions", False):
+        print(_summarize_edsl_exceptions(results))
 
     # Extract scores
     interest_scores = [r for r in results.select("interest").to_list() if r is not None]
