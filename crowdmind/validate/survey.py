@@ -21,6 +21,7 @@ import time
 import os
 
 from crowdmind.validate.personas import get_balanced_personas, ALL_PERSONAS
+from crowdmind.validate.runner import run_interviews, AdaptiveRunner
 
 if TYPE_CHECKING:
     from edsl import AgentList, Survey
@@ -250,6 +251,7 @@ def run_multi_metric_survey(
     verbose: bool = True,
     max_retries: int = MAX_RETRIES,
     report_api_issues: bool = True,
+    runner: Optional["AdaptiveRunner"] = None,  # NEW
 ) -> ValidationResult:
     """
     Run the multi-metric survey and return structured results.
@@ -297,25 +299,40 @@ def run_multi_metric_survey(
         estimated_cost = agent_count * 0.01  # ~$0.01 per persona
         print(f"  Estimated cost: ~${estimated_cost:.2f}")
 
-    # Run with retry logic (suppress EDSL's vague "Exceptions were raised" + HTML path)
-    def _run():
-        return survey.by(agents).by(model).run(
-            print_exceptions=False,
-            verbose=False,
+    # Question names to extract
+    question_names = [
+        "interest", "usefulness", "urgency",
+        "would_pay", "reasoning", "missing",
+    ]
+
+    # Run with adaptive concurrency (per-interview, with retry)
+    agents_list = list(agents) if not isinstance(agents, list) else agents
+    raw_results = run_interviews(
+        survey=survey,
+        agents=agents_list,
+        model=model,
+        question_names=question_names,
+        verbose=verbose,
+        runner=runner,
+    )
+
+    # Filter out failed interviews (None entries)
+    successful = [(i, r) for i, r in enumerate(raw_results) if r is not None]
+    failed_count = len(raw_results) - len(successful)
+
+    if report_api_issues and failed_count > 0:
+        print(
+            f"\n  Warning: {failed_count} of {len(raw_results)} persona "
+            f"interviews failed. Scores based on {len(successful)} responses."
         )
 
-    results = _run_with_retry(_run, verbose=verbose, max_retries=max_retries)
-
-    if report_api_issues and getattr(results, "has_unfixed_exceptions", False):
-        print(_summarize_edsl_exceptions(results))
-
-    # Extract scores
-    interest_scores = [r for r in results.select("interest").to_list() if r is not None]
-    usefulness_scores = [r for r in results.select("usefulness").to_list() if r is not None]
-    urgency_scores = [r for r in results.select("urgency").to_list() if r is not None]
-    would_pay_responses = [r for r in results.select("would_pay").to_list() if r is not None]
-    reasoning_responses = [r for r in results.select("reasoning").to_list() if r is not None]
-    missing_responses = [r for r in results.select("missing").to_list() if r is not None]
+    # Extract scores from per-agent result dicts
+    interest_scores = [r["interest"] for _, r in successful if r.get("interest") is not None]
+    usefulness_scores = [r["usefulness"] for _, r in successful if r.get("usefulness") is not None]
+    urgency_scores = [r["urgency"] for _, r in successful if r.get("urgency") is not None]
+    would_pay_responses = [r["would_pay"] for _, r in successful if r.get("would_pay") is not None]
+    reasoning_responses = [r["reasoning"] for _, r in successful if r.get("reasoning") is not None]
+    missing_responses = [r["missing"] for _, r in successful if r.get("missing") is not None]
 
     # Calculate averages
     def avg(lst: List) -> float:
@@ -336,35 +353,32 @@ def run_multi_metric_survey(
         "no": round(would_pay_responses.count("No") / total_pay, 2) if total_pay else 0,
     }
 
-    # Build feedback list
+    # Build feedback list (only for successful interviews)
     feedback = []
-    # Use the personas_list we created earlier (before converting to AgentList)
-    n_feedback = min(
-        len(interest_scores),
-        len(usefulness_scores),
-        len(urgency_scores),
-        len(personas_list) if personas_list else num_agents,
-    )
-    for i in range(n_feedback):
-        if personas_list and i < len(personas_list):
-            persona = personas_list[i]
-            persona_label = persona.name if hasattr(persona, 'name') else f"Persona {i+1}"
+    for orig_idx, r in successful:
+        if personas_list and orig_idx < len(personas_list):
+            persona = personas_list[orig_idx]
+            persona_label = (
+                persona.name if hasattr(persona, 'name')
+                else persona.persona if hasattr(persona, 'persona')
+                else f"Persona {orig_idx+1}"
+            )
             persona_cat = persona.category if hasattr(persona, 'category') else "unknown"
         else:
-            persona_label = f"Persona {i+1}"
+            persona_label = f"Persona {orig_idx+1}"
             persona_cat = "unknown"
-        
+
         feedback.append(PersonaFeedback(
             persona_name=persona_label,
             persona_category=persona_cat,
             scores={
-                "interest": interest_scores[i] if i < len(interest_scores) else None,
-                "usefulness": usefulness_scores[i] if i < len(usefulness_scores) else None,
-                "urgency": urgency_scores[i] if i < len(urgency_scores) else None,
+                "interest": r.get("interest"),
+                "usefulness": r.get("usefulness"),
+                "urgency": r.get("urgency"),
             },
-            reasoning=reasoning_responses[i] if i < len(reasoning_responses) else "",
-            concerns="",  # Could add a concerns question
-            missing=missing_responses[i] if i < len(missing_responses) else "",
+            reasoning=r.get("reasoning", ""),
+            concerns="",
+            missing=r.get("missing", ""),
         ))
 
     # Generate synthesis (simple version - could use LLM)
@@ -377,7 +391,7 @@ def run_multi_metric_survey(
         feedback=feedback,
         synthesis=synthesis,
         recommendations=recommendations,
-        raw_results=results
+        raw_results=raw_results
     )
 
 
