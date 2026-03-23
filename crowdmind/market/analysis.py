@@ -12,11 +12,13 @@ Uses EDSL to survey simulated buyers on willingness to pay.
 
 import json
 import subprocess
+import time
 from pathlib import Path
 from typing import Optional, List, Dict, Union
 from datetime import datetime
 
 from crowdmind.config import get_config
+from crowdmind.validate.runner import run_interviews, AdaptiveRunner
 
 try:
     from edsl import Agent, AgentList, Model
@@ -170,9 +172,26 @@ How likely are you to pay for this tool? (1 = Never, 10 = Definitely)""",
         question_options=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     )
     
-    pay_results = q_pay.by(agents).by(model).run()
-    results["would_pay"] = [r for r in pay_results.select("would_pay").to_list() if r]
-    
+    # Create shared runner (concurrency state persists between surveys)
+    from edsl import Survey
+    runner = AdaptiveRunner(max_concurrency=5, verbose=verbose)
+    agents_list = list(agents) if not isinstance(agents, list) else agents
+
+    # Run willingness-to-pay
+    pay_survey = Survey([q_pay])
+    pay_raw = runner.run(pay_survey, agents_list, model, question_names=["would_pay"])
+    results["would_pay"] = [
+        r.get("would_pay") for r in pay_raw
+        if r is not None and r.get("would_pay") is not None
+    ]
+
+    # Cooldown between surveys
+    cooldown = runner.get_cooldown()
+    if cooldown > 0:
+        if verbose:
+            print(f"  Cooling down {cooldown:.0f}s before next survey...")
+        time.sleep(cooldown)
+
     # Run price point question
     q_price = QuestionMultipleChoice(
         question_name="price_point",
@@ -184,15 +203,20 @@ Select your maximum price:""",
         question_options=[
             "$0 - Only if free",
             "$5-10/month",
-            "$10-20/month", 
+            "$10-20/month",
             "$20-50/month",
             "$50-100/month",
             "$100+/month"
         ]
     )
-    
-    price_results = q_price.by(agents).by(model).run()
-    results["price_points"] = [r for r in price_results.select("price_point").to_list() if r]
+
+    # Run price-point
+    price_survey = Survey([q_price])
+    price_raw = runner.run(price_survey, agents_list, model, question_names=["price_point"])
+    results["price_points"] = [
+        r.get("price_point") for r in price_raw
+        if r is not None and r.get("price_point") is not None
+    ]
     
     # Calculate segment breakdown
     for i, persona in enumerate(BUYER_PERSONAS):
@@ -249,9 +273,24 @@ Your estimate:""",
         ]
     )
     
-    star_results = q_stars.by(agents).by(model).run()
-    star_estimates = [r for r in star_results.select("star_estimate").to_list() if r]
-    
+    from edsl import Survey
+    runner = AdaptiveRunner(max_concurrency=5, verbose=verbose)
+    agents_list = list(agents) if not isinstance(agents, list) else agents
+
+    # Star prediction
+    star_survey = Survey([q_stars])
+    star_raw = runner.run(star_survey, agents_list, model, question_names=["star_estimate"])
+    star_estimates = [
+        r.get("star_estimate") for r in star_raw
+        if r is not None and r.get("star_estimate") is not None
+    ]
+
+    cooldown = runner.get_cooldown()
+    if cooldown > 0:
+        if verbose:
+            print(f"  Cooling down {cooldown:.0f}s...")
+        time.sleep(cooldown)
+
     # User prediction
     q_users = QuestionMultipleChoice(
         question_name="user_estimate",
@@ -269,19 +308,34 @@ Your estimate:""",
             "50,000+ users"
         ]
     )
-    
-    user_results = q_users.by(agents).by(model).run()
-    user_estimates = [r for r in user_results.select("user_estimate").to_list() if r]
-    
+
+    user_survey = Survey([q_users])
+    user_raw = runner.run(user_survey, agents_list, model, question_names=["user_estimate"])
+    user_estimates = [
+        r.get("user_estimate") for r in user_raw
+        if r is not None and r.get("user_estimate") is not None
+    ]
+
+    cooldown = runner.get_cooldown()
+    if cooldown > 0:
+        if verbose:
+            print(f"  Cooling down {cooldown:.0f}s...")
+        time.sleep(cooldown)
+
     # Success likelihood
     q_success = QuestionLinearScale(
         question_name="success_likelihood",
         question_text="""Rate the overall likelihood of commercial success for this product (1 = Will fail, 10 = Will succeed):""",
         question_options=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     )
-    
-    success_results = q_success.by(agents).by(model).run()
-    success_scores = [r for r in success_results.select("success_likelihood").to_list() if r]
+
+    # Success likelihood
+    success_survey = Survey([q_success])
+    success_raw = runner.run(success_survey, agents_list, model, question_names=["success_likelihood"])
+    success_scores = [
+        r.get("success_likelihood") for r in success_raw
+        if r is not None and r.get("success_likelihood") is not None
+    ]
     
     return {
         "star_estimates": star_estimates,
