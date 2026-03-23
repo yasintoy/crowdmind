@@ -53,6 +53,13 @@ class CrowdMindConfig:
     @classmethod
     def load(cls) -> "CrowdMindConfig":
         """Load configuration from file and environment variables."""
+        try:
+            from dotenv import load_dotenv
+
+            load_dotenv()
+        except ImportError:
+            pass
+
         config = cls()
         
         # Load from YAML if available
