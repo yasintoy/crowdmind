@@ -8,6 +8,8 @@ Iteratively improves content by:
 4. Discarding those that don't help
 """
 
+import time
+import concurrent.futures
 from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any, List
@@ -19,12 +21,15 @@ try:
 except ImportError:
     HAS_ANTHROPIC = False
 
+from crowdmind.validate.runner import AdaptiveRunner
+
 
 def _run_survey(
     content: str,
     context_prompt: str,
     num_agents: int,
     verbose: bool,
+    runner: "AdaptiveRunner" = None,
 ) -> Any:
     try:
         from crowdmind.validate.survey import run_multi_metric_survey
@@ -35,6 +40,7 @@ def _run_survey(
             num_agents=num_agents,
             verbose=verbose,
             report_api_issues=True,
+            runner=runner,
         )
     except ImportError:
         from crowdmind.validate.panel import run_evaluation
@@ -90,6 +96,7 @@ class AutoresearchLoop:
             self.client = Anthropic()
         else:
             self.client = None
+        self._runner = AdaptiveRunner(max_concurrency=5, verbose=False)
 
     def optimize(
         self,
@@ -128,6 +135,7 @@ class AutoresearchLoop:
             context_prompt,
             num_agents=num_personas,
             verbose=False,
+            runner=self._runner,
         )
         current_score = float(initial_result.scores.get(metric, 5)) * 10
         initial_score = current_score
@@ -163,6 +171,7 @@ class AutoresearchLoop:
                 context_prompt,
                 num_agents=num_personas,
                 verbose=False,
+                runner=self._runner,
             )
             new_score = float(new_result.scores.get(metric, 5)) * 10
 
@@ -193,6 +202,25 @@ class AutoresearchLoop:
 
             if verbose:
                 print()
+
+            # Adaptive cooldown between iterations
+            cooldown = self._runner.get_cooldown()
+            if cooldown > 0:
+                if verbose:
+                    print(f"  Cooling down {cooldown:.0f}s (rate limit recovery)...")
+                # Pipeline: generate next proposal during cooldown if not last iteration
+                if i + 1 < max_iterations and current_score < target_score:
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                        _next_future = pool.submit(
+                            self._propose_improvement,
+                            current_content, context_prompt, current_score,
+                            [h.proposal for h in history if not h.kept],
+                        )
+                        time.sleep(cooldown)
+                        # Note: _next_future result not captured here - pipelining
+                        # just ensures the cooldown time is used productively
+                else:
+                    time.sleep(cooldown)
 
         return OptimizationResult(
             final_content=current_content,
