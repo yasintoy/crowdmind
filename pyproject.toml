@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crowdmind"
-version = "0.2.2"
+version = "0.2.3"
 description = "Autonomous product research powered by AI agents"
 readme = "README.md"
 license = {text = "MIT"}
