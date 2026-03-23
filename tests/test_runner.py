@@ -34,7 +34,9 @@ class TestAdaptiveRunner:
         from crowdmind.validate.runner import AdaptiveRunner
         runner = AdaptiveRunner(max_concurrency=2)
         assert runner.max_concurrency == 2
-        assert runner._semaphore._value == 2
+        # Semaphore is created per-batch in _run_batch, not at init
+        # Verify max_concurrency setting is preserved correctly
+        assert runner._initial_concurrency == 2
 
     def test_retries_failed_interviews_only(self):
         """When some interviews fail, retry only those - not all."""

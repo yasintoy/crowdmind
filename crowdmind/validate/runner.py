@@ -52,7 +52,6 @@ class AdaptiveRunner:
         self.rate_limit_delay = rate_limit_delay
         self.verbose = verbose
 
-        self._semaphore = threading.Semaphore(max_concurrency)
         self._lock = threading.Lock()
         self._consecutive_clean = 0
         self._total_rate_limits = 0
@@ -139,7 +138,12 @@ class AdaptiveRunner:
                 try:
                     result = future.result()
                     batch_results.append((idx, result))
-                except Exception:
+                except Exception as exc:
+                    exc_str = str(exc).lower()
+                    is_retryable = any(kw in exc_str for kw in ("429", "rate_limit", "timeout", "rate limit"))
+                    if not is_retryable:
+                        if self.verbose:
+                            print(f"  Interview {idx} failed with non-retryable error: {exc}")
                     batch_results.append((idx, None))
 
         return batch_results
@@ -224,6 +228,9 @@ class AdaptiveRunner:
                 self._cooldown_seconds = max(0, self._cooldown_seconds - 5.0)
                 if self.verbose and old != self.max_concurrency:
                     print(f"  Concurrency recovered: {old} -> {self.max_concurrency}")
+            elif self.max_concurrency >= self._initial_concurrency:
+                # Already at max - reset counter to prevent unbounded accumulation
+                self._consecutive_clean = 0
 
     def get_cooldown(self) -> float:
         """Suggested cooldown in seconds before next batch (for optimize loop)."""
