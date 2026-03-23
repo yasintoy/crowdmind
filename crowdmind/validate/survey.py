@@ -251,7 +251,7 @@ def run_multi_metric_survey(
     verbose: bool = True,
     max_retries: int = MAX_RETRIES,
     report_api_issues: bool = True,
-    runner: Optional["AdaptiveRunner"] = None,  # NEW
+    runner: Optional[AdaptiveRunner] = None,  # NEW
 ) -> ValidationResult:
     """
     Run the multi-metric survey and return structured results.
@@ -314,6 +314,7 @@ def run_multi_metric_survey(
         question_names=question_names,
         verbose=verbose,
         runner=runner,
+        max_retries=max_retries,
     )
 
     # Filter out failed interviews (None entries)
@@ -327,12 +328,12 @@ def run_multi_metric_survey(
         )
 
     # Extract scores from per-agent result dicts
-    interest_scores = [r["interest"] for _, r in successful if r.get("interest") is not None]
-    usefulness_scores = [r["usefulness"] for _, r in successful if r.get("usefulness") is not None]
-    urgency_scores = [r["urgency"] for _, r in successful if r.get("urgency") is not None]
-    would_pay_responses = [r["would_pay"] for _, r in successful if r.get("would_pay") is not None]
-    reasoning_responses = [r["reasoning"] for _, r in successful if r.get("reasoning") is not None]
-    missing_responses = [r["missing"] for _, r in successful if r.get("missing") is not None]
+    interest_scores = [r.get("interest") for _, r in successful if r.get("interest") is not None]
+    usefulness_scores = [r.get("usefulness") for _, r in successful if r.get("usefulness") is not None]
+    urgency_scores = [r.get("urgency") for _, r in successful if r.get("urgency") is not None]
+    would_pay_responses = [r.get("would_pay") for _, r in successful if r.get("would_pay") is not None]
+    reasoning_responses = [r.get("reasoning") for _, r in successful if r.get("reasoning") is not None]
+    missing_responses = [r.get("missing") for _, r in successful if r.get("missing") is not None]
 
     # Calculate averages
     def avg(lst: List) -> float:
