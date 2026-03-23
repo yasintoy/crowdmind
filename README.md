@@ -62,6 +62,7 @@ Persona Feedback:
 2. **Generates feature ideas** that solve real pain points (not imagined ones)
 3. **Validates before you build** — test with 5 to 100+ AI personas in seconds
 4. **Kills bad ideas early** — save weeks of building things nobody wants
+5. **Handles rate limits automatically** — adaptive concurrency retries only failed interviews, never restarts the whole batch
 
 **Validate features before deploying. Test positioning before launching. Know what users want before asking them.**
 
@@ -395,6 +396,15 @@ optimized = run_optimization(
 )
 print(f"Score: {optimized.initial_score} → {optimized.final_score}")
 print(f"Improvements: {optimized.improvements_made}")
+
+# Advanced: share one AdaptiveRunner across multiple surveys
+# (preserves rate-limit state between calls — useful for large batches)
+from crowdmind.validate.runner import AdaptiveRunner
+from crowdmind.validate.survey import run_multi_metric_survey
+
+runner = AdaptiveRunner(max_concurrency=5)
+result_a = run_multi_metric_survey("Idea A", num_agents=10, runner=runner)
+result_b = run_multi_metric_survey("Idea B", num_agents=10, runner=runner)
 ```
 
 ## Aha Moments
@@ -459,6 +469,17 @@ crowdmind validate "Pivoting from B2C to B2B developer tools"
 ```
 
 ## FAQ
+
+<details>
+<summary><strong>What happens if I hit API rate limits?</strong></summary>
+
+CrowdMind handles this automatically. Each persona interview runs independently — if some hit a 429, only those are retried (not the whole batch). Concurrency is halved on rate limit, then gradually recovered. You can tune behavior with env vars:
+
+```bash
+CROWDMIND_MAX_RETRIES=3       # retry attempts per interview (default: 3)
+CROWDMIND_RATE_LIMIT_DELAY=60 # seconds to wait after a rate limit (default: 60)
+```
+</details>
 
 <details>
 <summary><strong>Is AI feedback accurate?</strong></summary>
