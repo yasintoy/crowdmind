@@ -9,15 +9,13 @@ Instead of just "would you star this?", asks:
 - Reasoning (free text)
 - Missing (free text)
 
-Includes error handling for:
-- Rate limits (exponential backoff)
-- API timeouts (retry)
-- Partial failures (continue with available results)
+Rate limit handling and per-interview retry are delegated to AdaptiveRunner
+(crowdmind.validate.runner). Partial failures return available results with
+a warning.
 """
 
 from dataclasses import dataclass
 from typing import List, Dict, Optional, Any, TYPE_CHECKING
-import time
 import os
 
 from crowdmind.validate.personas import get_balanced_personas, ALL_PERSONAS
@@ -34,10 +32,8 @@ except ImportError:
     HAS_EDSL = False
 
 
-# Error handling configuration
+# Default max retries (forwarded to AdaptiveRunner)
 MAX_RETRIES = int(os.environ.get("CROWDMIND_MAX_RETRIES", "3"))
-RETRY_DELAY_SECONDS = int(os.environ.get("CROWDMIND_RETRY_DELAY", "5"))
-RATE_LIMIT_DELAY_SECONDS = int(os.environ.get("CROWDMIND_RATE_LIMIT_DELAY", "60"))
 
 
 @dataclass
@@ -116,130 +112,6 @@ What would make this more appealing? What's missing?"""
         ),
     ])
 
-
-def _run_with_retry(func, verbose: bool = True, max_retries: int = MAX_RETRIES):
-    """
-    Run a function with retry logic for rate limits and transient errors.
-    
-    Handles:
-    - Rate limits (429): Wait 60s and retry
-    - Timeouts: Exponential backoff
-    - Transient API errors: Retry up to max_retries
-    """
-    last_error = None
-    
-    for attempt in range(max_retries):
-        try:
-            return func()
-        except Exception as e:
-            last_error = e
-            error_str = str(e).lower()
-            
-            # Check for rate limit errors
-            if "429" in error_str or (
-                "rate" in error_str and "limit" in error_str
-            ):
-                if verbose:
-                    print(f"  ⚠️  Rate limit hit. Waiting {RATE_LIMIT_DELAY_SECONDS}s before retry...")
-                time.sleep(RATE_LIMIT_DELAY_SECONDS)
-                continue
-            
-            # Check for timeout errors
-            if "timeout" in error_str or "timed out" in error_str:
-                delay = RETRY_DELAY_SECONDS * (2 ** attempt)  # Exponential backoff
-                if verbose:
-                    print(f"  ⚠️  Timeout. Retrying in {delay}s (attempt {attempt + 1}/{max_retries})...")
-                time.sleep(delay)
-                continue
-            
-            # Check for transient API errors
-            if "500" in error_str or "502" in error_str or "503" in error_str:
-                delay = RETRY_DELAY_SECONDS * (2 ** attempt)
-                if verbose:
-                    print(f"  ⚠️  API error. Retrying in {delay}s (attempt {attempt + 1}/{max_retries})...")
-                time.sleep(delay)
-                continue
-            
-            # Unknown error - don't retry
-            raise
-    
-    # All retries exhausted
-    raise last_error
-
-
-def _summarize_edsl_exceptions(results: Any) -> str:
-    """
-    Human-readable summary when EDSL interviews partially fail.
-    Replaces EDSL's stderr-only 'Exceptions were raised.' + HTML report path.
-    """
-    if not getattr(results, "has_unfixed_exceptions", False):
-        return ""
-    rate_limit = False
-    timeout = False
-    auth_error = False
-    other_msgs: List[str] = []
-    th = getattr(results, "task_history", None)
-    if th is None:
-        return (
-            "\n⚠️  CrowdMind: some persona interviews failed.\n"
-            "   Common cause: Anthropic rate limits (429) from parallel requests.\n"
-            "   Fix: use --personas 3–5 or wait 60s and retry."
-        )
-    try:
-        exc_groups = getattr(th, "exceptions", None) or []
-        for coll in exc_groups:
-            if hasattr(coll, "list"):
-                for item in coll.list():
-                    et = str(item.get("exception_type", ""))
-                    if "RateLimit" in et:
-                        rate_limit = True
-                    if "Timeout" in et:
-                        timeout = True
-                    if "Authentication" in et or "Auth" in et:
-                        auth_error = True
-            raw = getattr(coll, "data", None)
-            if raw is not None and hasattr(raw, "items"):
-                for _q, entries in raw.items():
-                    for entry in entries:
-                        exc = getattr(entry, "exception", None)
-                        if exc is None:
-                            continue
-                        msg = str(exc).lower()
-                        if "429" in msg or "rate_limit" in msg:
-                            rate_limit = True
-                        if "timeout" in msg:
-                            timeout = True
-                        if "401" in msg or "403" in msg or "api key" in msg:
-                            auth_error = True
-                        snippet = str(exc)[:200].replace("\n", " ")
-                        if snippet and snippet not in other_msgs:
-                            other_msgs.append(snippet)
-    except Exception:
-        pass
-
-    lines = [
-        "\n⚠️  CrowdMind: not all persona interviews completed successfully "
-        "(scores may be skewed)."
-    ]
-    if rate_limit:
-        lines.append(
-            "   Cause: API rate limits — too many parallel model calls (common on Anthropic)."
-        )
-        lines.append(
-            "   Fix:  use --personas 3–5, wait ~60s between runs, or upgrade API limits."
-        )
-    elif auth_error:
-        lines.append("   Cause: API authentication / permission error.")
-        lines.append("   Fix:  check ANTHROPIC_API_KEY (or your provider key) and billing.")
-    elif timeout:
-        lines.append("   Cause: Request timeouts.")
-        lines.append("   Fix:  retry with fewer personas or later.")
-    elif other_msgs:
-        lines.append(f"   Detail: {other_msgs[0]}")
-    else:
-        lines.append("   Cause: LLM or EDSL errors during some interviews.")
-        lines.append("   Fix:  retry with --personas 5; confirm API quota and model name.")
-    return "\n".join(lines)
 
 
 def run_multi_metric_survey(
