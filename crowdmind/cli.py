@@ -179,6 +179,7 @@ def validate(
         if not quiet:
             console.print(f"\n[dim]Creating {personas} AI personas...[/dim]")
             console.print(f"[dim]Asking each: interest, usefulness, urgency, would pay[/dim]")
+            console.print(f"[dim]Adaptive rate limiting: auto-adjusting concurrency[/dim]")
             console.print(f"[dim]Estimated time: ~{personas * 3}s[/dim]\n")
             
             with Progress(
@@ -326,7 +327,8 @@ def optimize(
         console.print(Panel.fit(
             "[bold blue]CrowdMind Autoresearch Optimization[/bold blue]\n"
             f"Target: {target}/100 | Max iterations: {iterations}\n"
-            f"Metric: {metric}",
+            f"Metric: {metric}\n"
+            f"[dim]Adaptive rate limiting enabled[/dim]",
             border_style="blue"
         ))
     
